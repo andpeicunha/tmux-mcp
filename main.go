@@ -71,7 +71,7 @@ func main() {
 			mcp.Description("Window name, e.g. 'executor', 'reviewer'"),
 		),
 		mcp.WithString("status",
-			mcp.Description("Status icon to prefix: 'busy' (⚡), 'done' (✓), 'wait' (⏳), or omit for no icon"),
+			mcp.Description("Status icon to prefix: 'busy' (⚡), 'done' (🟢), 'wait' (🔴), or omit for no icon"),
 		),
 	), handleRenameWindow)
 
@@ -108,7 +108,7 @@ func main() {
 	), handleCreatePane)
 
 	s.AddTool(mcp.NewTool("wait_for_idle",
-		mcp.WithDescription("Wait until an agent in a pane finishes its task and is ready for new input. Returns the elapsed time."),
+		mcp.WithDescription("Wait until an agent in a pane finishes its task and is ready for new input. Updates the window tab icon automatically: busy (⚡) while waiting, done (🟢) when idle, wait (🔴) on timeout or error."),
 		mcp.WithString("target",
 			mcp.Required(),
 			mcp.Description("Pane target in session:window.pane format"),
@@ -118,6 +118,9 @@ func main() {
 		),
 		mcp.WithString("agent",
 			mcp.Description("Agent type: claude, codex, cursor, shell, or auto (default auto)"),
+		),
+		mcp.WithBoolean("update_icon",
+			mcp.Description("Update the window tab icon during wait (default true)"),
 		),
 	), handleWaitForIdle)
 
@@ -247,8 +250,9 @@ func handleWaitForIdle(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToo
 	}
 	timeout := req.GetInt("timeout", 300)
 	agentType := req.GetString("agent", "auto")
+	updateIcon := req.GetBool("update_icon", true)
 
-	elapsed, err := tmux.WaitForIdle(target, agentType, timeout)
+	elapsed, err := tmux.WaitForIdle(target, agentType, timeout, updateIcon)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}

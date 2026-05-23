@@ -115,8 +115,47 @@ func CreatePane(session, name, dir, command, split string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+var statusIconPrefixes = []string{"⚡ ", "🟢 ", "🔴 "}
+
+// PaneToWindowTarget converts a pane target (session:window.pane) to a window target (session:window).
+func PaneToWindowTarget(paneTarget string) string {
+	if i := strings.LastIndex(paneTarget, "."); i >= 0 {
+		return paneTarget[:i]
+	}
+	return paneTarget
+}
+
+// GetWindowName returns the current name of a tmux window.
+func GetWindowName(windowTarget string) (string, error) {
+	out, err := exec.Command("tmux", "display-message", "-t", windowTarget, "-p", "#{window_name}").Output()
+	if err != nil {
+		return "", fmt.Errorf("tmux get window name %s: %w", windowTarget, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// StripStatusIcon removes a known status icon prefix from a window name.
+func StripStatusIcon(name string) string {
+	for _, prefix := range statusIconPrefixes {
+		if strings.HasPrefix(name, prefix) {
+			return strings.TrimPrefix(name, prefix)
+		}
+	}
+	return name
+}
+
+// SetWindowStatus renames the window containing paneTarget, prefixing with a status icon.
+func SetWindowStatus(paneTarget, status string) error {
+	windowTarget := PaneToWindowTarget(paneTarget)
+	name, err := GetWindowName(windowTarget)
+	if err != nil {
+		return err
+	}
+	return RenameWindow(windowTarget, StripStatusIcon(name), status)
+}
+
 // RenameWindow renames a tmux window (tab), optionally prefixing with a status icon.
-// status: "busy" → ⚡, "done" → ✓, "wait" → ⏳, "" → no prefix
+// status: "busy" → ⚡, "done" → 🟢, "wait" → 🔴, "" → no prefix
 func RenameWindow(target, name, status string) error {
 	prefix := map[string]string{
 		"busy": "⚡ ",

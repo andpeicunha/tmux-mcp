@@ -12,7 +12,7 @@ MCP server that exposes tmux panes as tools, enabling AI agents (Claude Code, Co
 | `send_to_pane` | Send text or a command to a specific pane |
 | `read_pane` | Read the current output of a pane |
 | `broadcast` | Send text to multiple panes, optionally filtered by agent type |
-| `wait_for_idle` | Wait until an agent finishes its task and is ready for new input |
+| `wait_for_idle` | Wait until an agent finishes its task and is ready for new input; updates tab icon automatically (⚡ busy → 🟢 done / 🔴 wait) |
 
 ## How it works
 
@@ -26,7 +26,7 @@ The MCP server wraps tmux's CLI. Each tool maps to one or more tmux commands:
 | `send_to_pane` | `tmux send-keys -t <target>` |
 | `read_pane` | `tmux capture-pane -t <target> -p` |
 | `broadcast` | `tmux send-keys` loop across panes |
-| `wait_for_idle` | polling `capture-pane` until idle prompt detected |
+| `wait_for_idle` | polling `capture-pane` until idle prompt detected; renames window tab with status icon |
 
 ## Pane targets
 
@@ -97,6 +97,18 @@ set -g pane-border-format " #{pane_index}: #{pane_title} "
 ```
 
 After `rename_pane`, each pane shows its title in the border — making it easy to identify which agent is running where.
+
+## Automatic tab icons
+
+When `wait_for_idle` is called, the window tab icon updates automatically:
+
+| Phase | Icon | When |
+|---|---|---|
+| busy | ⚡ | At the start of `wait_for_idle` |
+| done | 🟢 | Agent detected as idle |
+| wait | 🔴 | Timeout or error |
+
+Pass `update_icon=false` to disable. Manual control remains available via `rename_window`.
 
 ## Build
 

@@ -34,7 +34,7 @@ func DetectAgent(target string) string {
 	}
 }
 
-func WaitForIdle(target, agentType string, timeoutSecs int) (string, error) {
+func WaitForIdle(target, agentType string, timeoutSecs int, updateIcon bool) (string, error) {
 	if agentType == "auto" {
 		agentType = DetectAgent(target)
 	}
@@ -44,12 +44,19 @@ func WaitForIdle(target, agentType string, timeoutSecs int) (string, error) {
 		patterns = idlePatterns["shell"]
 	}
 
+	if updateIcon {
+		_ = SetWindowStatus(target, "busy")
+	}
+
 	start := time.Now()
 	deadline := time.Duration(timeoutSecs) * time.Second
 
 	for time.Since(start) < deadline {
 		output, err := ReadPane(target, 5)
 		if err != nil {
+			if updateIcon {
+				_ = SetWindowStatus(target, "wait")
+			}
 			return "", err
 		}
 
@@ -58,6 +65,9 @@ func WaitForIdle(target, agentType string, timeoutSecs int) (string, error) {
 			lastLine := lines[len(lines)-1]
 			for _, pattern := range patterns {
 				if strings.Contains(lastLine, pattern) {
+					if updateIcon {
+						_ = SetWindowStatus(target, "done")
+					}
 					return time.Since(start).Round(time.Millisecond).String(), nil
 				}
 			}
@@ -66,5 +76,8 @@ func WaitForIdle(target, agentType string, timeoutSecs int) (string, error) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
+	if updateIcon {
+		_ = SetWindowStatus(target, "wait")
+	}
 	return "", fmt.Errorf("timeout after %ds waiting for %s to become idle in %s", timeoutSecs, agentType, target)
 }
