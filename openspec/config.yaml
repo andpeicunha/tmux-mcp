@@ -1,0 +1,7 @@
+schema: spec-driven
+project: tmux-mcp
+
+context: |
+  MCP server em Go que expõe panes tmux como tools para orquestração multi-agente.
+  Integra com Claude Code, Codex e Cursor CLI via tmux send-keys/capture-pane.
+  Tab icons: ⚡ busy, 🟢 done, 🔴 wait (via rename_window e wait_for_idle).
