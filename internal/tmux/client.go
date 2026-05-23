@@ -124,6 +124,8 @@ func RenameWindow(target, name, status string) error {
 		"wait": "🔴 ",
 	}[status]
 	fullName := prefix + name
+	// Disable auto-rename for this window so the icon persists
+	_ = exec.Command("tmux", "set-window-option", "-t", target, "automatic-rename", "off").Run()
 	if err := exec.Command("tmux", "rename-window", "-t", target, fullName).Run(); err != nil {
 		return fmt.Errorf("tmux rename-window %s: %w", target, err)
 	}
