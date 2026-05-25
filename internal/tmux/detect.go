@@ -5,14 +5,31 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"unicode"
 )
 
-// idlePatterns are the last-line patterns that indicate an agent is waiting for input.
+// idlePatterns: agent finished and is ready for new input → 🟢
 var idlePatterns = map[string][]string{
-	"claude": {"❯ ", "> ", "? for shortcuts", "✓"},
-	"codex":  {"❯ ", "> "},
-	"cursor": {"❯ ", "> "},
-	"shell":  {"$ ", "% ", "# "},
+	"claude": {"❯", "? for shortcuts", "✓"},
+	"codex":  {"❯", ">"},
+	"cursor": {"Add a follow-up", "ctrl+c to stop"},
+	"shell":  {"$", "%", "#"},
+}
+
+// waitPatterns: agent needs user approval before continuing → 🔴
+var waitPatterns = map[string][]string{
+	"cursor": {"Run (once)", "(y)", "allowlist?", "ctrl+r to review"},
+	"claude": {"Do you want to proceed"},
+}
+
+// normalizeSpaces replaces all Unicode whitespace (including NBSP) with a regular space.
+func normalizeSpaces(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return ' '
+		}
+		return r
+	}, s)
 }
 
 func DetectAgent(target string) string {
@@ -27,7 +44,7 @@ func DetectAgent(target string) string {
 		return "claude"
 	case strings.Contains(cmd, "codex"):
 		return "codex"
-	case strings.Contains(cmd, "cursor"):
+	case strings.Contains(cmd, "cursor"), cmd == "agent":
 		return "cursor"
 	default:
 		return "shell"
@@ -62,7 +79,7 @@ func WaitForIdle(target, agentType string, timeoutSecs int, updateIcon bool) (st
 
 		lines := strings.Split(strings.TrimSpace(output), "\n")
 		if len(lines) > 0 {
-			lastLine := lines[len(lines)-1]
+			lastLine := normalizeSpaces(lines[len(lines)-1])
 			for _, pattern := range patterns {
 				if strings.Contains(lastLine, pattern) {
 					if updateIcon {
