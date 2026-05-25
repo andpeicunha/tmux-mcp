@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/andrecunha/tmux-mcp/internal/tmux"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -12,6 +15,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "monitor" {
+		runMonitor(os.Args[2:])
+		return
+	}
+
 	s := server.NewMCPServer("tmux-mcp", "0.1.0",
 		server.WithToolCapabilities(true),
 	)
@@ -241,6 +249,14 @@ func handleBroadcast(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText(fmt.Sprintf("sent to %d panes", count)), nil
+}
+
+func runMonitor(args []string) {
+	fs := flag.NewFlagSet("monitor", flag.ExitOnError)
+	interval := fs.Duration("interval", 2*time.Second, "polling interval (e.g. 2s, 500ms)")
+	_ = fs.Parse(args)
+	log.Printf("tmux-mcp monitor started (interval=%s) — watching agent panes", *interval)
+	tmux.MonitorLoop(*interval)
 }
 
 func handleWaitForIdle(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
